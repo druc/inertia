@@ -11,6 +11,7 @@ export default {
   visitId: null,
   cancelToken: null,
   page: null,
+  referer: null,
 
   init({ initialPage, resolveComponent, updatePage }) {
     this.resolveComponent = resolveComponent
@@ -84,6 +85,7 @@ export default {
         Accept: 'text/html, application/xhtml+xml',
         'X-Requested-With': 'XMLHttpRequest',
         'X-Inertia': true,
+        'X-Inertia-Referer': this.referer,
         ...(only.length ? {
           'X-Inertia-Partial-Component': this.page.component,
           'X-Inertia-Partial-Data': only.join(','),
@@ -112,7 +114,7 @@ export default {
       }
     }).then(page => {
       if (page) {
-        if (only.length) {
+        if (page.partial) {
           page.props = { ...this.page.props, ...page.props }
         }
 
@@ -133,6 +135,7 @@ export default {
 
   setPage(page, { visitId = this.createVisitId(), replace = false, preserveScroll = false, preserveState = false } = {}) {
     this.page = page
+    this.referer = page.referer;
     progress.increment()
     return Promise.resolve(this.resolveComponent(page.component)).then(component => {
       if (visitId === this.visitId) {
@@ -200,6 +203,10 @@ export default {
 
   replace(url, options = {}) {
     return this.visit(url, { preserveState: true, ...options, replace: true })
+  },
+
+  back(options ={}) {
+    return this.visit(this.referer, { preserveState: true, ...options })
   },
 
   reload(options = {}) {
