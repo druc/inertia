@@ -13,7 +13,7 @@ export default {
   page: null,
   renderUrl: null,
 
-  init({initialPage, resolveComponent, updatePage}) {
+  init({ initialPage, resolveComponent, updatePage }) {
     this.resolveComponent = resolveComponent
     this.updatePage = updatePage
 
@@ -21,7 +21,7 @@ export default {
       this.setPage(window.history.state)
     } else if (window.sessionStorage.getItem('inertia.hardVisit')) {
       window.sessionStorage.removeItem('inertia.hardVisit')
-      this.setPage(initialPage, {preserveState: true})
+      this.setPage(initialPage, { preserveState: true })
     } else {
       initialPage.url += window.location.hash
       this.setPage(initialPage)
@@ -69,7 +69,7 @@ export default {
     return this.visitId
   },
 
-  visit(url, {method = 'get', data = {}, replace = false, preserveScroll = false, preserveState = false, only = []} = {}) {
+  visit(url, { method = 'get', data = {}, replace = false, preserveScroll = false, preserveState = false, only = [] } = {}) {
     progress.start()
     this.cancelActiveVisits()
     this.saveScrollPositions()
@@ -85,12 +85,12 @@ export default {
         Accept: 'text/html, application/xhtml+xml',
         'X-Requested-With': 'XMLHttpRequest',
         'X-Inertia': true,
-        ...(this.renderUrl ? {'X-Inertia-Render-Url': this.renderUrl} : {}),
+        ...(this.renderUrl ? { 'X-Inertia-Render-Url': this.renderUrl } : {}),
         ...(only.length ? {
           'X-Inertia-Partial-Component': this.page.component,
           'X-Inertia-Partial-Data': only.join(','),
         } : {}),
-        ...(this.version ? {'X-Inertia-Version': this.version} : {}),
+        ...(this.version ? { 'X-Inertia-Version': this.version } : {}),
       },
     }).then(response => {
       if (this.isInertiaResponse(response)) {
@@ -115,10 +115,10 @@ export default {
     }).then(page => {
       if (page) {
         if (page.partial) {
-          page.props = {...this.page.props, ...page.props}
+          page.props = { ...this.page.props, ...page.props }
         }
 
-        return this.setPage(page, {visitId, replace, preserveScroll, preserveState})
+        return this.setPage(page, { visitId, replace, preserveScroll, preserveState })
       }
     })
   },
@@ -133,7 +133,7 @@ export default {
     }
   },
 
-  setPage(page, {visitId = this.createVisitId(), replace = false, preserveScroll = false, preserveState = false} = {}) {
+  setPage(page, { visitId = this.createVisitId(), replace = false, preserveScroll = false, preserveState = false } = {}) {
     this.page = page
     this.renderUrl = page.renderUrl
     progress.increment()
@@ -141,7 +141,7 @@ export default {
       if (visitId === this.visitId) {
         this.version = page.version
         this.setState(page, replace, preserveState)
-        this.updatePage(component, page.props, {preserveState}).then(() => {
+        this.updatePage(component, page.props, { preserveState }).then(() => {
           let scrollRegions = this.scrollRegions()
 
           scrollRegions.forEach(region => {
@@ -167,7 +167,7 @@ export default {
   setState(page, replace = false, preserveState = false) {
     if (replace || page.url === `${window.location.pathname}${window.location.search}`) {
       window.history.replaceState({
-        ...{cache: preserveState && window.history.state ? window.history.state.cache : {}},
+        ...{ cache: preserveState && window.history.state ? window.history.state.cache : {} },
         ...page,
       }, '', page.url)
     } else {
@@ -187,7 +187,7 @@ export default {
         if (visitId === this.visitId) {
           this.version = this.page.version
           this.setState(this.page)
-          this.updatePage(component, this.page.props, {preserveState: false}).then(() => {
+          this.updatePage(component, this.page.props, { preserveState: false }).then(() => {
             if (this.page.scrollRegions) {
               this.scrollRegions().forEach((region, index) => {
                 region.scrollTop = this.page.scrollRegions[index].top
@@ -202,7 +202,7 @@ export default {
   },
 
   replace(url, options = {}) {
-    return this.visit(url, {preserveState: true, ...options, replace: true})
+    return this.visit(url, { preserveState: true, ...options, replace: true })
   },
 
   reload(options = {}) {
@@ -210,23 +210,23 @@ export default {
   },
 
   post(url, data = {}, options = {}) {
-    return this.visit(url, {preserveState: true, ...options, method: 'post', data})
+    return this.visit(url, { preserveState: true, ...options, method: 'post', data })
   },
 
   put(url, data = {}, options = {}) {
-    return this.visit(url, {preserveState: true, ...options, method: 'put', data})
+    return this.visit(url, { preserveState: true, ...options, method: 'put', data })
   },
 
   patch(url, data = {}, options = {}) {
-    return this.visit(url, {preserveState: true, ...options, method: 'patch', data})
+    return this.visit(url, { preserveState: true, ...options, method: 'patch', data })
   },
 
   delete(url, options = {}) {
-    return this.visit(url, {...options, method: 'delete'})
+    return this.visit(url, { ...options, method: 'delete' })
   },
 
   remember(data, key = 'default') {
-    let newState = {...window.history.state}
+    let newState = { ...window.history.state }
     newState.cache = newState.cache || {}
     newState.cache[key] = data
     this.setState(newState)
