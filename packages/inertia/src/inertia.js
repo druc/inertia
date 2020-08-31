@@ -11,7 +11,6 @@ export default {
   visitId: null,
   cancelToken: null,
   page: null,
-  renderUrl: null,
 
   init({ initialPage, resolveComponent, updatePage }) {
     this.resolveComponent = resolveComponent
@@ -85,7 +84,7 @@ export default {
         Accept: 'text/html, application/xhtml+xml',
         'X-Requested-With': 'XMLHttpRequest',
         'X-Inertia': true,
-        ...(this.renderUrl ? { 'X-Inertia-Render-Url': this.renderUrl } : {}),
+        ...(this.page.renderUrl ? { 'X-Inertia-Render-Url': this.page.renderUrl } : {}),
         ...(only.length ? {
           'X-Inertia-Partial-Component': this.page.component,
           'X-Inertia-Partial-Data': only.join(','),
@@ -135,7 +134,6 @@ export default {
 
   setPage(page, { visitId = this.createVisitId(), replace = false, preserveScroll = false, preserveState = false } = {}) {
     this.page = page
-    this.renderUrl = page.renderUrl
     progress.increment()
     return Promise.resolve(this.resolveComponent(page.component)).then(component => {
       if (visitId === this.visitId) {
