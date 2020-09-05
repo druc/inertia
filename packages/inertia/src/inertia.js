@@ -1,13 +1,16 @@
 import Axios from 'axios'
-import Modal from './modal'
-import Progress from './progress'
+import debounce from './debounce'
+import modal from './modal'
+import progress from './progress'
 
 export default {
+  saveScrollPositions: null,
   resolveComponent: null,
   updatePage: null,
   version: null,
   visitId: null,
   cancelToken: null,
+  page: null,
 
   init({ initialPage, resolveComponent, updatePage }) {
     this.resolveComponent = resolveComponent
@@ -15,9 +18,25 @@ export default {
 
     if (window.history.state && this.navigationType() === 'back_forward') {
       this.setPage(window.history.state)
+    } else if (window.sessionStorage.getItem('inertia.hardVisit')) {
+      window.sessionStorage.removeItem('inertia.hardVisit')
+      this.setPage(initialPage, { preserveState: true })
     } else {
+      initialPage.url += window.location.hash
       this.setPage(initialPage)
     }
+
+    this.saveScrollPositions = debounce(() => {
+      this.setState({
+        ...window.history.state,
+        scrollRegions: Array.prototype.slice.call(this.scrollRegions()).map(region => {
+          return {
+            top: region.scrollTop,
+            left: region.scrollLeft,
+          }
+        }),
+      })
+    }, 100)
 
     window.addEventListener('popstate', this.restoreState.bind(this))
   },
@@ -26,6 +45,10 @@ export default {
     if (window.performance && window.performance.getEntriesByType('navigation').length) {
       return window.performance.getEntriesByType('navigation')[0].type
     }
+  },
+
+  scrollRegions() {
+    return document.querySelectorAll('[scroll-region]')
   },
 
   isInertiaResponse(response) {
@@ -45,14 +68,15 @@ export default {
     return this.visitId
   },
 
-  visit(url, { method = 'get', data = {}, replace = false, preserveScroll = false, preserveState = false } = {}) {
-    Progress.start()
+  visit(url, { method = 'get', data = {}, replace = false, preserveScroll = false, preserveState = false, only = [] } = {}) {
+    progress.start()
     this.cancelActiveVisits()
+    this.saveScrollPositions()
     let visitId = this.createVisitId()
 
     return Axios({
       method,
-      url,
+      url: url.toString(),
       data: method.toLowerCase() === 'get' ? {} : data,
       params: method.toLowerCase() === 'get' ? data : {},
       cancelToken: this.cancelToken.token,
@@ -60,36 +84,47 @@ export default {
         Accept: 'text/html, application/xhtml+xml',
         'X-Requested-With': 'XMLHttpRequest',
         'X-Inertia': true,
+        ...(this.page.renderUrl ? { 'X-Inertia-Render-Url': this.page.renderUrl } : {}),
+        ...(only.length ? {
+          'X-Inertia-Partial-Component': this.page.component,
+          'X-Inertia-Partial-Data': only.join(','),
+        } : {}),
         ...(this.version ? { 'X-Inertia-Version': this.version } : {}),
       },
     }).then(response => {
       if (this.isInertiaResponse(response)) {
         return response.data
       } else {
-        Modal.show(response.data)
+        modal.show(response.data)
       }
     }).catch(error => {
       if (Axios.isCancel(error)) {
         return
       } else if (error.response.status === 409 && error.response.headers['x-inertia-location']) {
-        Progress.stop()
+        progress.stop()
         return this.hardVisit(true, error.response.headers['x-inertia-location'])
       } else if (this.isInertiaResponse(error.response)) {
         return error.response.data
       } else if (error.response) {
-        Progress.stop()
-        Modal.show(error.response.data)
+        progress.stop()
+        modal.show(error.response.data)
       } else {
         return Promise.reject(error)
       }
     }).then(page => {
       if (page) {
-        this.setPage(page, visitId, replace, preserveScroll, preserveState)
+        if (page.partial) {
+          page.props = { ...this.page.props, ...page.props }
+        }
+
+        return this.setPage(page, { visitId, replace, preserveScroll, preserveState })
       }
     })
   },
 
   hardVisit(replace, url) {
+    window.sessionStorage.setItem('inertia.hardVisit', true)
+
     if (replace) {
       window.location.replace(url)
     } else {
@@ -97,39 +132,70 @@ export default {
     }
   },
 
-  setPage(page, visitId = this.createVisitId(), replace = false, preserveScroll = false, preserveState = false) {
-    Progress.increment()
+  setPage(page, { visitId = this.createVisitId(), replace = false, preserveScroll = false, preserveState = false } = {}) {
+    this.page = page
+    progress.increment()
     return Promise.resolve(this.resolveComponent(page.component)).then(component => {
       if (visitId === this.visitId) {
         this.version = page.version
         this.setState(page, replace, preserveState)
-        this.updatePage(component, page.props, { preserveState })
-        this.setScroll(preserveScroll)
-        Progress.stop()
+        this.updatePage(component, page.props, { preserveState }).then(() => {
+          let scrollRegions = this.scrollRegions()
+
+          scrollRegions.forEach(region => {
+            region.addEventListener('scroll', this.saveScrollPositions)
+          })
+
+          if (!preserveScroll) {
+            document.documentElement.scrollTop = 0
+            document.documentElement.scrollLeft = 0
+            scrollRegions.forEach(region => {
+              region.scrollTop = 0
+              region.scrollLeft = 0
+            })
+          }
+
+          this.saveScrollPositions()
+        })
+        progress.stop()
       }
     })
-  },
-
-  setScroll(preserveScroll) {
-    if (!preserveScroll) {
-      window.scrollTo(0, 0)
-    }
   },
 
   setState(page, replace = false, preserveState = false) {
     if (replace || page.url === `${window.location.pathname}${window.location.search}`) {
       window.history.replaceState({
-        ...((preserveState && window.history.state) ? { cache: window.history.state.cache } : {}),
+        ...{ cache: preserveState && window.history.state ? window.history.state.cache : {} },
         ...page,
       }, '', page.url)
     } else {
-      window.history.pushState(page, '', page.url)
+      window.history.pushState({
+        cache: {},
+        ...page,
+      }, '', page.url)
     }
   },
 
   restoreState(event) {
     if (event.state) {
-      this.setPage(event.state)
+      progress.start()
+      this.page = event.state
+      let visitId = this.createVisitId()
+      return Promise.resolve(this.resolveComponent(this.page.component)).then(component => {
+        if (visitId === this.visitId) {
+          this.version = this.page.version
+          this.setState(this.page)
+          this.updatePage(component, this.page.props, { preserveState: false }).then(() => {
+            if (this.page.scrollRegions) {
+              this.scrollRegions().forEach((region, index) => {
+                region.scrollTop = this.page.scrollRegions[index].top
+                region.scrollLeft = this.page.scrollRegions[index].left
+              })
+            }
+          })
+          progress.stop()
+        }
+      })
     }
   },
 
@@ -158,10 +224,10 @@ export default {
   },
 
   remember(data, key = 'default') {
-    this.setState({
-      ...window.history.state,
-      cache: { ...window.history.state.cache, [key]: data },
-    })
+    let newState = { ...window.history.state }
+    newState.cache = newState.cache || {}
+    newState.cache[key] = data
+    this.setState(newState)
   },
 
   restore(key = 'default') {

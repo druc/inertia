@@ -1,7 +1,17 @@
-# Inertia.js
+[![Inertia.js](https://raw.githubusercontent.com/inertiajs/inertia/master/.github/LOGO.png)](https://inertiajs.com/)
 
-> **Note:** This project is in the very early stages of development and IS NOT yet intended for public consumption. If you submit an issue, I do not guarantee a response. Please do not submit pull requests without first consulting me on Twitter ([@reinink](https://twitter.com/reinink)).
+Inertia.js lets you quickly build modern single-page React, Vue and Svelte apps using classic server-side routing and controllers. Find full documentation at [inertiajs.com](https://inertiajs.com/).
 
-## About
+## Contributing
 
-Inertia.js is a JavaScript framework for creating server-driven single page apps. To learn more about it, see the [introduction blog post](https://reinink.ca/articles/introducing-inertia-js).
+If you're interested in contributing to Inertia.js, please read our [contributing guide](https://github.com/inertiajs/inertia/blob/master/.github/CONTRIBUTING.md).
+
+## Sponsors
+
+A huge thanks to all [our sponsors](https://inertiajs.com/sponsors) who help push Inertia.js development forward! In particular, we'd like to say a special thank you to our gold sponsors:
+
+- [Ploi](https://ploi.io/)
+- [Forge](https://forge.laravel.com/)
+- [ActivitySource](https://www.activitysource.com/)
+
+If you'd like to become a sponsor, please [see here](https://inertiajs.com/sponsors) for more information. 💜

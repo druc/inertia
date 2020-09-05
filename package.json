@@ -1,16 +1,13 @@
 {
-  "name": "inertia",
-  "version": "0.1.0",
-  "description": "A framework for creating server-driven single page apps.",
-  "main": "src/index.js",
-  "author": "Jonathan Reinink",
-  "license": "MIT",
-  "typings": "index.d.ts",
-  "dependencies": {
-    "axios": "^0.18.0",
-    "nprogress": "^0.2.0"
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "yarn wsrun --exclude-missing build",
+    "watch": "yarn wsrun --exclude-missing watch"
   },
-  "devDependencies": {
-    "eslint": "^5.15.3"
+  "dependencies": {
+    "wsrun": "^5.2.1"
   }
 }
